@@ -1,0 +1,39 @@
+# tells Docker Compose what syntax version you’re using.
+# 3.8 works well with modern Docker Engine versions — it defines which keys and features are supported.
+version: "3.8"
+
+services:
+  # This section defines each container (service) that makes up your app
+  # Each service will work as container. 
+  mongo:
+    image: mongo:6.0 #base mongo image
+    container_name: flask_mongo_mongo # container name
+    restart: unless-stopped # tells Docker to automatically restart the Mongo container if it stop
+    environment: # Environment variables to be passed to mongo base image for authentication
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-example}
+    volumes:
+      - mongo_data:/data/db # for persistent storage. mounts a named volume (mongo_data) into /data/db inside the container
+    ports:
+      - "27017:27017" #Exposes Mongo’s default port 27017 to your host machine.
+      # mongodb://root:example@localhost:27017/
+
+  web:
+    build:
+      context: ./app # instead pulling image from dockerHub, build it from /app Dockerfile
+    container_name: flask_mongo_web # container name
+    restart: on-failure # will restart if failed
+    depends_on: # tell docker-compose to start mongo before this app.
+      - mongo
+    environment:
+      # Correct Mongo URI with authentication   
+      MONGO_URI: mongodb://root:example@mongo:27017/flaskdb?authSource=admin
+    ports:
+      - "5000:5000"
+    volumes:
+      # “Take the ./app directory (relative to docker-compose.yml) from the host machine and mount it directly at /app inside the container.”
+      # This allows live code changes without rebuilding the image. 
+      - ./app:/app
+
+volumes:
+  mongo_data:

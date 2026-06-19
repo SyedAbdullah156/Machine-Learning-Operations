@@ -1,0 +1,40 @@
+version: "3.8"
+services:
+  mongo:
+    image: mongo:latest
+    container_name: mongo_db
+    ports:
+      - "27017:27017" # host:container
+    volumes:
+      - mongo_data:/data/db
+
+  mlflow:
+    build: ./mlflow
+    container_name: mlflow_server
+    ports:
+      - "5000:5000" # host:container
+    volumes:
+      - ./mlflow_server/artifacts:/mlflow/artifacts
+      - ./mlflow_server/mlflow.db:/mlflow/mlflow.db
+
+  web:
+    build:
+      context: ./web
+    container_name: flask_web
+    ports:
+      - "8080:8080" # host:container
+    depends_on:
+      - mlflow
+      - mongo
+
+  train:
+    build: ./train 
+    container_name: train_model
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow_server:5000
+    depends_on:
+      - mlflow
+    
+volumes:
+  mongo_data:
+  
